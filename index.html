@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Пазл «Панорама» — Попутчик</title>
+  <meta name="description" content="Красивая браузерная игра-пазл: собирай панорамы, соревнуйся с друзьями, делись ссылкой." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;600&display=swap" rel="stylesheet" />
+
+  <style>
+    :root{ --acc:#6ce0ff; --text:#e9f1ff; --muted:#a8b0c7; --radius:18px; --glass: rgba(255,255,255,.08); --shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.04); }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:"Rubik",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; color:var(--text);
+      background: radial-gradient(1200px 700px at 80% 10%, #1f2750 0%, #0b1020 55%), radial-gradient(900px 500px at 10% 90%, #1f2b33 0%, #0b1020 65%);
+      overflow-x:hidden; overflow-y:auto;
+    }
+    .bg{position:fixed; inset:0; pointer-events:none;
+      background: radial-gradient(60vmax 40vmax at 10% 85%, rgba(108,224,255,.10), transparent 60%),
+                 radial-gradient(50vmax 35vmax at 90% 10%, rgba(161,255,207,.08), transparent 60%);
+      filter:saturate(120%); animation:floaty 18s ease-in-out infinite;}
+    @keyframes floaty{0%{transform:translateY(0)}50%{transform:translateY(-12px)}100%{transform:translateY(0)}}
+
+    .wrap{position:relative; height:100%; display:grid; grid-template-columns: 360px 1fr; gap:20px; padding:20px}
+    @media (max-width: 980px){ .wrap{grid-template-columns: 1fr; grid-template-rows:auto 1fr; padding:14px; gap:14px} }
+    header{
+      grid-column:1/-1; display:flex; align-items:center; gap:12px; padding:14px 18px;
+      background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      border-radius: var(--radius); box-shadow:var(--shadow); backdrop-filter: blur(10px);
+    }
+    header .logo{ width:42px; height:42px; border-radius:12px;
+      background: conic-gradient(from 200deg, #8be9ff, #baffd9, #8be9ff); box-shadow: 0 0 32px rgba(140,255,220,.25) inset; }
+    header h1{font-size:20px; margin:0; letter-spacing:.3px}
+    header .sub{color:var(--muted); font-size:13px}
+
+    .panel{display:flex; flex-direction:column; gap:14px; padding:16px; background:var(--glass); border-radius: var(--radius); box-shadow:var(--shadow); backdrop-filter: blur(16px); min-height:0}
+    .section{display:flex; flex-direction:column; gap:10px}
+    .section h2{font-size:14px; font-weight:600; margin:0; color:#cfe6ff; text-transform:uppercase; letter-spacing:.12em}
+    .section .mut{color:var(--muted); font-size:13px}
+
+    .gallery{
+  display:flex;
+  flex-wrap:nowrap;
+  gap:8px;
+  overflow-x:auto;
+  padding-bottom:4px;
+  scroll-snap-type:x mandatory;
+}
+.gallery::-webkit-scrollbar{height:6px;}
+.gallery::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18); border-radius:4px;}
+.gallery::-webkit-scrollbar-track{background:transparent;}
+    .thumb{position:relative; border-radius:14px; overflow-x:hidden; overflow-y:auto; aspect-ratio: 16/9; cursor:pointer; border:1px solid rgba(255,255,255,.08); background:#0e1428;}
+    .thumb img{display:block; width:100%; height:100%; object-fit:cover; transform:translateZ(0);}
+    .thumb:after{content:''; position:absolute; inset:0; box-shadow: inset 0 -40px 80px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.06);}
+    .thumb .tlabel{position:absolute; left:8px; bottom:8px; font-size:12px; padding:6px 8px; border-radius:10px; backdrop-filter: blur(6px); background: rgba(0,0,0,.40); color:#eef7ff;}
+    .thumb.active{outline:2px solid var(--acc)}
+    .upload{display:flex; align-items:center; justify-content:center; gap:8px; font-size:14px; padding:10px 12px; border-radius:12px; border:1px dashed rgba(255,255,255,.15); color:#d9f7ff; cursor:pointer; background:rgba(255,255,255,.03)}
+    .upload:hover{background:rgba(255,255,255,.06)}
+
+    .controls{display:grid; grid-template-columns: 1fr 1fr; gap:10px}
+    .btn{user-select:none; -webkit-tap-highlight-color:transparent; background:linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.06)); border:1px solid rgba(255,255,255,.10); color:white; padding:12px 14px; border-radius:12px; cursor:pointer; text-align:center; box-shadow:var(--shadow); transition: transform .08s ease, box-shadow .2s ease, background .3s ease; font-weight:600; font-size:14px; letter-spacing:.2px;}
+    .btn:hover{transform: translateY(-1px)} .btn:active{transform: translateY(0)}
+    .btn.primary{background:linear-gradient(180deg, rgba(140,255,220,.4), rgba(140,255,220,.08)); border-color: rgba(161,255,207,.45); color:#04161a}
+
+    .row{display:flex; align-items:center; justify-content:space-between; gap:10px}
+    .row .label{font-size:14px; color:#cfe6ff} .row .value{font-weight:600}
+    .range{accent-color:#7df2ff; width:100%}
+
+    .toggles{display:flex; gap:10px; flex-wrap:wrap}
+    .toggle{display:flex; align-items:center; gap:8px; background:rgba(255,255,255,.06); padding:8px 12px; border-radius:999px; border:1px solid rgba(255,255,255,.10); font-size:13px; cursor:pointer; user-select:none;}
+    .toggle input{accent-color:#7df2ff}
+
+    .stats{display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; margin-top:6px}
+    .stat{background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10); border-radius:12px; padding:10px 12px; text-align:center}
+    .stat b{display:block; font-size:18px; margin-top:2px}
+
+    .board-wrap{position:relative; background:var(--glass); border-radius: var(--radius); box-shadow:var(--shadow); overflow-x:hidden; overflow-y:auto; min-height:0}
+    .boardSizer{position:relative; width:100%;}
+    .boardSizer::before{ content:''; display:block; padding-bottom: 62%; }
+    @media (max-height: 760px) and (min-width: 981px){ .boardSizer::before{padding-bottom: 56%} }
+    @media (max-width: 980px){ .boardSizer::before{padding-bottom: 78%} }
+
+    .board{ position:absolute; inset:0; display:grid; place-items:stretch; transition: filter .3s ease; }
+    .hintOverlay{ position:absolute; inset:0; opacity:0; pointer-events:none; transition: opacity .25s ease; background-position:center; background-repeat:no-repeat; background-size:cover; filter: saturate(120%) contrast(105%) brightness(105%); }
+    .gridLines{ position:absolute; inset:0; pointer-events:none; background-size: var(--cols) 100%, 100% var(--rows);
+      background-image: linear-gradient(to right, rgba(255,255,255,.12) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,.12) 1px, transparent 1px); opacity:0; transition: opacity .25s ease; }
+
+    .tile{ position:relative; user-select:none; -webkit-user-drag:none; background-size: var(--bgW) var(--bgH); background-repeat:no-repeat;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+      cursor:pointer; border-radius:8px; transition: transform .08s ease, box-shadow .15s ease; background-color:#111828; }
+    .tile:active{transform: scale(.98)}
+    .tile.right{box-shadow:0 0 0 4px rgba(161,255,207,.95), inset 0 0 0 1px rgba(255,255,255,.08)}
+    .tile.selected{outline:4px solid var(--acc); outline-offset:-2px; box-shadow:0 0 0 4px rgba(108,224,255,.95), inset 0 0 0 1px rgba(255,255,255,.08)}
+
+    .paused .board{filter: grayscale(1) brightness(.8)}
+    .paused .overlayPause{opacity:1; pointer-events:auto}
+    .overlayPause{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(6,10,22,.55);
+      font-size:22px; font-weight:600; letter-spacing:.3px; opacity:0; pointer-events:none; transition: opacity .25s ease; }
+
+    .previewBox{position:absolute; right:12px; top:12px; width:190px; max-width:40%; background:rgba(5,10,20,.88); border-radius:12px; padding:6px; box-shadow:0 10px 24px rgba(0,0,0,.55); display:none; z-index:2;}
+    .previewBox img{width:100%; display:block; border-radius:8px;}
+
+    .win-modal{ position:absolute; inset:auto 0 20px 0; margin:auto; width:min(640px, 92vw);
+      background:linear-gradient(180deg, rgba(255,255,255,.15), rgba(255,255,255,.06)); border:1px solid rgba(255,255,255,.18);
+      border-radius:16px; box-shadow: var(--shadow); padding:16px; display:none; z-index:4; }
+    .win-modal.visible{display:block; animation:pop .25s ease}
+    @keyframes pop{from{transform:translateY(10px); opacity:.0} to{transform:translateY(0); opacity:1}}
+    .win-modal .title{font-size:18px; font-weight:700}
+    .win-modal .sub{color:var(--muted); margin-top:6px}
+    .win-actions{margin-top:12px; display:flex; gap:10px; flex-wrap:wrap}
+    .win-actions .btn{flex:1}
+
+    canvas.confetti{position:absolute; inset:0; pointer-events:none; z-index:3}
+    .credit{font-size:12px; color:var(--muted)} .credit a{color:#b8ffde}
+    .thumb .tlabel{display:none;}
+    .credit{display:none;}
+
+  </style>
+</head>
+<body>
+  <div class="bg"></div>
+
+  <div class="wrap">
+    <header>
+      <div class="logo" aria-hidden="true"></div>
+      <div>
+        <h1>Пазл «Панорама» <span style="opacity:.8;font-weight:300">· Попутчик</span></h1>
+        <div class="sub">Собери панораму. Включай подсказку, меняй сложность, делись лучшим временем.</div>
+      </div>
+    </header>
+
+    <aside class="panel" id="leftPanel">
+      <div class="section">
+        <h2>Выбор панорамы</h2>
+        <div class="gallery" id="gallery"></div>
+        <div class="credit" id="credit"></div>
+      </div>
+
+      <div class="section">
+        <h2>Сложность</h2>
+        <div class="row">
+          <div class="label">Размер сетки</div>
+          <div class="value"><span id="diffLabel">4×4</span></div>
+        </div>
+        <input type="range" min="3" max="8" value="4" class="range" id="diffRange" />
+        <div class="mut">Больше — сложнее. От 3×3 до 8×8.</div>
+      </div>
+
+      <div class="section">
+        <h2>Опции</h2>
+        <div class="toggles">
+          <label class="toggle"><input type="checkbox" id="hintToggle" /> Подсказка</label>
+          <label class="toggle"><input type="checkbox" id="gridToggle" /> Сетка</label>
+          <label class="toggle"><input type="checkbox" id="previewToggle" /> Образец</label>
+        </div>
+        <div class="controls">
+          <div class="btn primary" id="shuffleBtn">Перемешать</div>
+          <div class="btn" id="pauseBtn">Пауза</div>
+        </div>
+        <div class="stats">
+          <div class="stat">Время<b id="time">00:00</b></div>
+          <div class="stat">Ходы<b id="moves">0</b></div>
+          <div class="stat">Лучшее<b id="best">—</b></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Совет</h2>
+        <div class="mut">Кликни по двум фрагментам, чтобы их поменять. Толстая голубая окантовка — выбранный фрагмент. Ярко‑зелёная — фрагмент на своём месте.</div>
+      </div>
+    </aside>
+
+    <main class="panel board-wrap" id="gamePanel">
+      <div class="boardSizer">
+        <div class="board" id="board"></div>
+        <div class="hintOverlay" id="hint"></div>
+        <div class="gridLines" id="grid"></div>
+        <div class="previewBox" id="previewBox">
+          <img id="previewImage" alt="Образец панорамы" />
+        </div>
+        <canvas class="confetti" id="confetti"></canvas>
+        <div class="overlayPause">Пауза</div>
+        <div class="win-modal" id="winModal">
+          <div class="title">Собрано! 🎉</div>
+          <div class="sub" id="winText"></div>
+          <div class="win-actions">
+            <div class="btn primary" id="againBtn">Ещё раз</div>
+            <div class="btn" id="downloadBtn">Скачать открытку</div>
+            <div class="btn" id="shareBtn">Поделиться</div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+  ;(() => {
+    /*** Три красивые фотографии (детская/природа/машина) с Pexels ***/
+    const IMAGES = [
+      {
+        id:'pexels-teddy',
+        title:'Медвежонок (детская)',
+        credit:'Фото: Pexels (Caroline)',
+        url:'https://images.pexels.com/photos/37158/pexels-photo.jpg?cs=srgb&dl=pexels-caroline81291-37158.jpg&fm=jpg' // teddy close-up
+      },
+      {
+        id:'pexels-nature',
+        title:'Горное озеро (природа)',
+        credit:'Фото: Pexels (Eberhard Grossgasteiger)',
+        url:'https://images.pexels.com/photos/443446/pexels-photo-443446.jpeg?cs=srgb&dl=pexels-eberhardgross-443446.jpg&fm=jpg' // lake & mountains
+      },
+      {
+        id:'pexels-car',
+        title:'Суперкар на мосту (авто)',
+        credit:'Фото: Pexels (A2PRO)',
+        url:'https://images.pexels.com/photos/3422964/pexels-photo-3422964.jpeg?cs=srgb&dl=pexels-a2pro-3422964.jpg&fm=jpg' // sports car driving
+      }
+    ];
+
+    /*** ЭЛЕМЕНТЫ ***/
+    const galleryEl = document.getElementById('gallery');
+    const creditEl  = document.getElementById('credit');
+    const boardEl   = document.getElementById('board');
+    const hintEl    = document.getElementById('hint');
+    const gridEl    = document.getElementById('grid');
+    const timeEl    = document.getElementById('time');
+    const movesEl   = document.getElementById('moves');
+    const bestEl    = document.getElementById('best');
+    const diffRange = document.getElementById('diffRange');
+    const diffLabel = document.getElementById('diffLabel');
+    const shuffleBtn= document.getElementById('shuffleBtn');
+    const pauseBtn  = document.getElementById('pauseBtn');
+    const hintToggle= document.getElementById('hintToggle');
+    const gridToggle= document.getElementById('gridToggle');
+    const confettiC = document.getElementById('confetti');
+    const winModal  = document.getElementById('winModal');
+    const winText   = document.getElementById('winText');
+    const againBtn  = document.getElementById('againBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const shareBtn  = document.getElementById('shareBtn');
+    const gamePanel = document.getElementById('gamePanel');
+    const previewToggle = document.getElementById('previewToggle');
+    const previewBox = document.getElementById('previewBox');
+    const previewImage = document.getElementById('previewImage');
+
+    /*** СОСТОЯНИЕ ***/
+    let state = {
+      rows: 4, cols: 4,
+      image: IMAGES[0],
+      imgEl: null,
+      order: [], tiles: [],
+      started:false, paused:false, done:false,
+      moves:0, secs:0, timer:null,
+      selectedIndex: null
+    };
+
+    /*** ИНИЦИАЛИЗАЦИЯ ***/
+    function init(){
+      // Галерея через <img>, чтобы миниатюры были видны везде
+      IMAGES.forEach((img, i)=>{
+        const div = document.createElement('div');
+        div.className = 'thumb'; div.dataset.id = img.id;
+        const im = document.createElement('img'); im.src = img.url; im.alt = img.title; im.loading = 'lazy';
+        div.appendChild(im);
+        const lab = document.createElement('div'); lab.className='tlabel'; lab.textContent = img.title; div.appendChild(lab);
+        if(i===0) div.classList.add('active');
+        div.addEventListener('click', ()=> selectImage(img.id));
+        galleryEl.appendChild(div);
+      });
+
+      diffRange.addEventListener('input', ()=> diffLabel.textContent = `${diffRange.value}×${diffRange.value}`);
+      diffRange.addEventListener('change', ()=>{ state.rows = state.cols = parseInt(diffRange.value,10); newGame(); });
+      shuffleBtn.addEventListener('click', ()=> newGame(true));
+      pauseBtn.addEventListener('click', togglePause);
+      hintToggle.addEventListener('change', ()=> hintEl.style.opacity = hintToggle.checked ? .35 : 0);
+      gridToggle.addEventListener('change', ()=> gridEl.style.opacity = gridToggle.checked ? 1 : 0);
+      againBtn.addEventListener('click', ()=> { winModal.classList.remove('visible'); newGame(true); });
+      downloadBtn.addEventListener('click', downloadPostcard);
+      shareBtn.addEventListener('click', share);
+
+      if (previewToggle) {
+        previewToggle.addEventListener('change', ()=>{
+          if (!previewBox) return;
+          previewBox.style.display = previewToggle.checked ? 'block' : 'none';
+        });
+      }
+
+      window.addEventListener('resize', queueLayout);
+
+      // Старт
+      loadImage(state.image);
+    }
+
+    function selectImage(id){
+      const img = IMAGES.find(x=>x.id===id);
+      if(!img) return;
+      state.image = img;
+      galleryEl.querySelectorAll('.thumb').forEach(t=> t.classList.toggle('active', t.dataset.id===id));
+      loadImage(img);
+    }
+
+
+    /*** ЗАГРУЗКА ИЗОБРАЖЕНИЯ ***/
+    function loadImage(imageObj){
+      creditEl.textContent = imageObj.credit || '';
+      const img = new Image();
+      img.onload = ()=>{
+        state.imgEl = img;
+        hintEl.style.backgroundImage = `url("${imageObj.url}")`;
+        if (previewImage) previewImage.src = imageObj.url;
+        newGame();
+      };
+      img.onerror = ()=>{ alert('Не удалось загрузить картинку. Попробуйте другую.'); };
+      img.src = imageObj.url;
+    }
+
+    /*** НОВАЯ ИГРА ***/
+    function newGame(shuffleNow=false){
+      stopTimer();
+      state.secs=0; state.moves=0; state.done=false; state.started=false; state.selectedIndex=null; state.paused=false;
+      timeEl.textContent = '00:00'; movesEl.textContent = '0'; gamePanel.classList.remove('paused');
+      winModal.classList.remove('visible');
+      buildBoard();
+      queueLayout();
+      setBestLabel();
+      if(shuffleNow) shuffle();
+    }
+
+    function buildBoard(){
+      const {rows, cols} = state;
+      boardEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+      boardEl.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+      gridEl.style.setProperty('--cols', `calc(100% / ${cols})`);
+      gridEl.style.setProperty('--rows', `calc(100% / ${rows})`);
+      const total = rows*cols;
+      boardEl.innerHTML = '';
+      state.tiles = [];
+      state.order = [...Array(total).keys()];
+      for(let id=0; id<total; id++){
+        const tile = document.createElement('div');
+        tile.className='tile';
+        tile.dataset.id = id;
+        tile.addEventListener('click', ()=> onTileClick(id));
+        state.tiles[id] = tile;
+      }
+      render();
+    }
+
+    function queueLayout(){ requestAnimationFrame(()=>requestAnimationFrame(layoutBoard)); }
+
+    function layoutBoard(){
+      const wrapRect = boardEl.parentElement.getBoundingClientRect();
+      const {rows, cols} = state;
+      const tileW = Math.floor(wrapRect.width / cols);
+      const tileH = Math.floor(wrapRect.height / rows);
+      const bgW = tileW*cols;
+      const bgH = tileH*rows;
+      boardEl.style.setProperty('--bgW', bgW+'px');
+      boardEl.style.setProperty('--bgH', bgH+'px');
+      for(let id=0; id<state.tiles.length; id++){
+        const tile = state.tiles[id]; if(!tile) continue;
+        const cx = id % cols; const cy = Math.floor(id / cols);
+        tile.style.backgroundImage = `url("${state.image.url}")`;
+        tile.style.backgroundPosition = `-${cx*tileW}px -${cy*tileH}px`;
+      }
+    }
+
+    /*** ПЕРЕМЕШИВАНИЕ / РЕНДЕР ***/
+    function shuffle(){
+      const arr = state.order.slice();
+      for(let i=arr.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+      if(arr.every((v,i)=>v===i)){ [arr[0], arr[1]] = [arr[1], arr[0]]; }
+      state.order = arr;
+      state.moves=0; movesEl.textContent='0';
+      state.started=false; state.secs=0; timeEl.textContent='00:00';
+      render();
+    }
+
+    function render(){
+      boardEl.innerHTML = '';
+      const {rows, cols} = state;
+      gridEl.style.backgroundSize = `${100/cols}% 100%, 100% ${100/rows}%`;
+      state.order.forEach((tileId, pos)=>{
+        const tile = state.tiles[tileId];
+        tile.classList.toggle('right', tileId===pos);
+        boardEl.appendChild(tile);
+      });
+      queueLayout();
+    }
+
+    /*** ВЗАИМОДЕЙСТВИЕ ***/
+    function onTileClick(tileId){
+      if(state.paused || state.done) return;
+      if(!state.started){ startTimer(); state.started=true; }
+      if(state.selectedIndex===null){
+        state.selectedIndex = state.order.indexOf(tileId);
+        state.tiles[tileId].classList.add('selected');
+        return;
+      }
+      const firstPos = state.selectedIndex;
+      const secondPos = state.order.indexOf(tileId);
+      if(firstPos===secondPos){
+        state.tiles[tileId].classList.remove('selected'); state.selectedIndex=null; return;
+      }
+      const firstTileId = state.order[firstPos];
+      state.tiles[firstTileId].classList.remove('selected');
+      [state.order[firstPos], state.order[secondPos]] = [state.order[secondPos], state.order[firstPos]];
+      state.selectedIndex=null;
+      state.moves++; movesEl.textContent = String(state.moves);
+      render();
+      checkSolved();
+    }
+
+    /*** ТАЙМЕР/ПАУЗА ***/
+    function startTimer(){ stopTimer(); state.timer = setInterval(()=>{ state.secs++; timeEl.textContent = fmtTime(state.secs); }, 1000); }
+    function stopTimer(){ if(state.timer){ clearInterval(state.timer); state.timer=null; } }
+    function fmtTime(s){ const m = Math.floor(s/60).toString().padStart(2,'0'); const ss= (s%60).toString().padStart(2,'0'); return `${m}:${ss}`; }
+    function togglePause(){
+      if(state.done) return;
+      state.paused = !state.paused;
+      if(state.paused){ stopTimer(); gamePanel.classList.add('paused'); pauseBtn.textContent='Продолжить'; }
+      else { if(state.started) startTimer(); gamePanel.classList.remove('paused'); pauseBtn.textContent='Пауза'; }
+    }
+
+    /*** ПРОВЕРКА ***/
+    function checkSolved(){
+      if(!state.order.every((v,i)=>v===i)) return;
+      state.done = true; stopTimer(); fireConfetti();
+      const time = fmtTime(state.secs);
+      winText.textContent = `Время: ${time} · Ходы: ${state.moves}`;
+      winModal.classList.add('visible');
+      const key = bestKey(); const prev = parseInt(localStorage.getItem(key)||'0',10);
+      if(!prev || state.secs<prev){ localStorage.setItem(key, String(state.secs)); setBestLabel(); }
+    }
+    function bestKey(){ return `panorama-best-${state.rows}x${state.cols}-${state.image.id}`; }
+    function setBestLabel(){ const s = localStorage.getItem(bestKey()); bestEl.textContent = s ? fmtTime(parseInt(s,10)) : '—'; }
+
+    /*** КОНФЕТТИ ***/
+    function fireConfetti(){
+      const rect = boardEl.getBoundingClientRect();
+      confettiC.style.width = rect.width + 'px';
+      confettiC.style.height = rect.height + 'px';
+      const ctx = confettiC.getContext('2d');
+      confettiC.width = rect.width*devicePixelRatio;
+      confettiC.height= rect.height*devicePixelRatio;
+      const N = 220;
+      const parts = Array.from({length:N}).map(()=> ({
+        x: Math.random()*confettiC.width, y: -Math.random()*confettiC.height*0.2, r: 3 + Math.random()*6,
+        c: `hsl(${Math.floor(180+Math.random()*160)}, 100%, 65%)`, vX: (-1+Math.random()*2)*0.4*devicePixelRatio,
+        vY: (1.2+Math.random()*1.8)*devicePixelRatio, rot: Math.random()*Math.PI, vr: (-.1+Math.random()*.2)
+      }));
+      let t=0, maxT=220;
+      (function anim(){ ctx.clearRect(0,0,confettiC.width, confettiC.height);
+        parts.forEach(p=>{ p.x+=p.vX; p.y+=p.vY; p.rot+=p.vr; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot); ctx.fillStyle=p.c; ctx.fillRect(-p.r, -p.r, p.r*2, p.r*2); ctx.restore(); });
+        if(t++<maxT) requestAnimationFrame(anim); else ctx.clearRect(0,0,confettiC.width, confettiC.height);
+      })();
+    }
+
+    /*** СКАЧАТЬ ОТКРЫТКУ ***/
+    function downloadPostcard(){
+      if (!state.imgEl) {
+        alert('Картинка ещё не успела загрузиться. Попробуйте через секунду.');
+        return;
+      }
+      const can = document.createElement('canvas');
+      const w = 1600, h = 900; can.width=w; can.height=h;
+      const ctx = can.getContext('2d');
+      try{
+        ctx.drawImage(state.imgEl, 0,0, w, h);
+      }catch(e){
+        alert('Браузер не разрешает сохранить открытку для этой панорамы. Если вы открыли файл с диска (file:///), это нормальное ограничение безопасности. По ссылке с GitHub Pages открытка будет сохраняться.');
+        return;
+      }
+      const pad = 28;
+      const barH = 150;
+      ctx.fillStyle='rgba(0,0,0,.45)'; ctx.fillRect(0, h-barH, w, barH);
+
+      ctx.fillStyle='#eaffff'; ctx.font='700 38px Rubik, system-ui';
+      ctx.fillText('Рейс 001 · Москва → Санкт-Петербург', pad, h-100);
+
+      const now = new Date();
+      const dd = String(now.getDate()).padStart(2,'0');
+      const mm = String(now.getMonth()+1).padStart(2,'0');
+      const yyyy = now.getFullYear();
+      const dateStr = dd + '.' + mm + '.' + yyyy;
+
+      ctx.font='400 26px Rubik, system-ui'; ctx.fillStyle='#d2f9ff';
+      ctx.fillText(`Дата: ${dateStr} · Время: ${fmtTime(state.secs)} · Ходы: ${state.moves} · Сложность ${state.rows}×${state.cols}`, pad, h-62);
+
+      ctx.font='400 24px Rubik, system-ui'; ctx.fillStyle='#c7f7ff';
+      ctx.fillText('На память о поездке с «Попутчиком»', pad, h-28);
+
+      const link = document.createElement('a'); link.download = 'панорама-открытка.png'; link.href = can.toDataURL('image/png'); link.click();
+    }
+
+    /*** ПОДЕЛИТЬСЯ ***/
+    async function share(){
+      const text = `Моё время в пазле «Панорама»: ${fmtTime(state.secs)}, ходы: ${state.moves}, сложность ${state.rows}×${state.cols}. Попробуешь?`;
+      const url = location.href;
+      if(navigator.share){ try{ await navigator.share({title:'Пазл «Панорама»', text, url}); } catch(e){} }
+      else { navigator.clipboard.writeText(url).then(()=> alert('Ссылка на игру скопирована в буфер обмена!')); }
+    }
+
+    init();
+  })();
+  </script>
+</body>
+</html>
